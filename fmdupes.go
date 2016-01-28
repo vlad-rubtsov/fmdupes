@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
-	id3 "github.com/mikkyang/id3-go"
 	tagg "github.com/wtolson/go-taglib"
 	gcfg "gopkg.in/gcfg.v1"
 )
 
+// Types
 type Config struct {
 	InputDir string
 }
@@ -33,38 +34,10 @@ type SongType struct {
 	Title  string
 }
 
+// Global
 var mp3List []Mp3Song
-
 var xxx map[SongType][]string
-
-func GetMp3Data_Old(filename string) (Mp3Song, error) {
-	mp3File, err := id3.Open(filename)
-	if err != nil {
-		fmt.Println("Open: unable to open file: ", err)
-		return Mp3Song{}, err
-	}
-	defer mp3File.Close()
-
-	// if mp3File.Title() == "Guachipupa" {
-	// 	//fmt.Println(mp3File)
-	// 	fmt.Println("padding: ", mp3File.Padding())
-	// 	fmt.Println("size: ", mp3File.Size())
-	// 	fmt.Println("version: ", mp3File.Version())
-	// }
-
-	fmt.Printf("f: %s, artist: %s, title: %s, v: %v\n",
-		filename, mp3File.Artist(), mp3File.Title(), mp3File.Version())
-	// fmt.Printf("file: %s, version: %v\n",
-	// 	filename, mp3File.Version())
-
-	return Mp3Song{
-		Filename: filename,
-		Artist:   mp3File.Artist(),
-		Title:    mp3File.Title(),
-		Genre:    mp3File.Genre(),
-		Size:     0,
-	}, nil
-}
+var cntMP3Files int
 
 func GetMp3Data(filename string) (Mp3Song, error) {
 	mp3File, err := tagg.Read(filename)
@@ -73,13 +46,6 @@ func GetMp3Data(filename string) (Mp3Song, error) {
 		return Mp3Song{}, err
 	}
 	defer mp3File.Close()
-
-	// if mp3File.Title() == "Guachipupa" {
-	// 	//fmt.Println(mp3File)
-	// 	fmt.Println("padding: ", mp3File.Padding())
-	// 	fmt.Println("size: ", mp3File.Size())
-	// 	fmt.Println("version: ", mp3File.Version())
-	// }
 
 	//fmt.Printf("f: %s, artist: %s, title: %s\n",
 	//	filename, mp3File.Artist(), mp3File.Title())
@@ -93,6 +59,17 @@ func GetMp3Data(filename string) (Mp3Song, error) {
 		Genre:    mp3File.Genre(),
 		Size:     0,
 	}, nil
+}
+
+func CountDirWalk(path string, fi os.FileInfo, err error) error {
+	if fi.IsDir() {
+		return nil
+	}
+	if filepath.Ext(path) != ".mp3" {
+		return nil
+	}
+	cntMP3Files++
+	return nil
 }
 
 func DirWalk(path string, fi os.FileInfo, err error) error {
@@ -136,7 +113,6 @@ func loadConfig(cfgFile string) Config {
 
 func main() {
 	xxx = make(map[SongType][]string)
-
 	// for future
 	// delete := flag.Bool("d", false, "prompt user for files to preserve and delete all")
 	// size := flag.Bool("S", false, "show size of duplicate files")
@@ -147,7 +123,6 @@ func main() {
 	// 	os.Exit(2)
 	// }
 	// flag.Parse()
-
 	cfg := loadConfig("fmdupes.conf")
 
 	// Walk in dirs
@@ -155,7 +130,19 @@ func main() {
 	dirs := strings.Split(cfg.InputDir, ",")
 	//fmt.Println("dirs: ", dirs)
 
+	// count all music files
 	for _, dir := range dirs {
+		err := filepath.Walk(dir, CountDirWalk)
+		if err != nil {
+			fmt.Errorf("DirWalk error: %v", err)
+		}
+	}
+	fmt.Printf("Found %d music files\n", cntMP3Files)
+
+	for _, dir := range dirs {
+		//files, _ := ioutil.ReadDir(dir)
+		//fmt.Println("count of dirs and files: ", len(files))
+
 		err := filepath.Walk(dir, DirWalk)
 		if err != nil {
 			fmt.Errorf("DirWalk error: %v", err)
@@ -169,17 +156,62 @@ func main() {
 	//fmt.Println("xxx: ", xxx)
 
 	// TODO: sort by count = len(val)
+	fmt.Printf("Found %d consequences\n", len(xxx))
+	in := ""
+	exit := false
 	for key, val := range xxx {
+		if exit {
+			break
+		}
 		count := len(val)
 		if count > 2 {
-			fmt.Printf("%v, count: %d\n", key, count)
+			fmt.Printf("%v, %d duplicates\n", key, count)
 			//fmt.Println(val)
 			for id, path := range val {
-				fmt.Printf("[%d] %s\n", id, path)
+				i := id + 1
+				fmt.Printf("[%d] %s\n", i, path)
 			}
-			fmt.Printf("Set [0-%d, all] to delete:\n", len(val))
+			fmt.Printf("Set [1-%d] to delete: ", len(val))
+			fmt.Scanln(&in)
+			switch in {
+			case "0":
+				break
+			case "":
+				break
+			case "q":
+				exit = true
+				break
+			case "all":
+				// TODO: delete all files
+				fmt.Println("Not realized yet")
+				break
+			default:
+				ids := strings.Split(in, ",")
+				for _, is := range ids {
+					ii, _ := strconv.Atoi(is)
+					filepath := val[ii-1]
+					f, _ := os.Open(filepath)
+					fi, _ := f.Stat()
+					size := fi.Size()
+					f.Close()
+
+					var kilobytes float64
+					kilobytes = (float64)(size / 1024)
+
+					var megabytes float64
+					megabytes = (float64)(kilobytes / 1024) // cast to type float64
+
+					fmt.Printf("Delete %s, size: %.3f MB\n", filepath, megabytes)
+					err := os.Remove(filepath)
+					if err != nil {
+						fmt.Printf("Error delete file: %s\n", err)
+					}
+				}
+			}
 			fmt.Println()
 		}
 	}
-
 }
+
+// TODO: show count of duplicate
+// TODO: show all delete size
