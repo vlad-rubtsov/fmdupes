@@ -40,7 +40,6 @@ var mp3List []Mp3Song
 var xxx map[SongType][]string
 var cntMP3Files int
 var bar *pb.ProgressBar
-var deleteAllSize int64
 
 func GetMp3Data(filename string) (Mp3Song, error) {
 	mp3File, err := tagg.Read(filename)
@@ -77,7 +76,6 @@ func CountDirWalk(path string, fi os.FileInfo, err error) error {
 
 func DirWalk(path string, fi os.FileInfo, err error) error {
 	//fmt.Println("walk path: ", path)
-
 	if fi.IsDir() {
 		//fmt.Println("Search in ", path)
 		//fmt.Printf("Process %d files\n", len(mp3List))
@@ -94,10 +92,6 @@ func DirWalk(path string, fi os.FileInfo, err error) error {
 		data.Path = path
 		mp3List = append(mp3List, data)
 
-		// Debug
-		// if data.Title == "Guachipupa" {
-		// 	fmt.Println(data)
-		// }
 		// TODO: save data for know time, size and bitrate
 		xxx[SongType{Artist: data.Artist, Title: data.Title}] =
 			append(xxx[SongType{Artist: data.Artist, Title: data.Title}], path)
@@ -154,25 +148,27 @@ func main() {
 	}
 	bar.FinishPrint("Result:")
 	fmt.Println("-------")
-	//fmt.Println("xxx: ", xxx)
 
 	// TODO: sort by count = len(val)
 	fmt.Printf("Found %d consequences\n", len(xxx))
-	in := ""
 	exit := false
+	cntCons := 0
+	var deleteAllSize int64
+	var cntDeletedFiles int
 	for key, val := range xxx {
 		if exit {
 			break
 		}
+		cntCons++
 		count := len(val)
 		if count > 2 {
-			fmt.Printf("%v, %d duplicates\n", key, count)
-			//fmt.Println(val)
+			fmt.Printf("%d. %v, %d duplicates\n", cntCons, key, count)
 			for id, path := range val {
 				i := id + 1
 				fmt.Printf("[%d] %s\n", i, path)
 			}
 			fmt.Printf("Set [1-%d] to delete: ", len(val))
+			in := ""
 			fmt.Scanln(&in)
 			switch in {
 			case "0":
@@ -207,14 +203,14 @@ func main() {
 						fmt.Printf("Error delete file: %s\n", err)
 					} else {
 						deleteAllSize += size
+						cntDeletedFiles++
 					}
 				}
 			}
 			fmt.Println()
 		} // if
 	} // for
-	fmt.Printf("All deleted size: %.3f MB\n", (float64)(deleteAllSize/1024/1024))
+	fmt.Printf("Delete %d files, all size: %.3f MB\n", cntDeletedFiles, (float64)(deleteAllSize/1024/1024))
 }
 
 // TODO: show count of duplicate
-// TODO: show all delete size
