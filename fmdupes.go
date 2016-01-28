@@ -150,8 +150,15 @@ func main() {
 	fmt.Println("-------")
 
 	// TODO: sort by count = len(val)
-	//fmt.Printf("Found %d uniques\n", len(xxx))
-	// TODO: Count duplicates (count > 1)
+
+	cntDuplicates := 0
+	for _, val := range xxx {
+		if len(val) > 1 {
+			cntDuplicates++
+		}
+	}
+	fmt.Printf("Found %d duplicates\n", cntDuplicates)
+
 	exit := false
 	cntCons := 0
 	var deleteAllSize int64
@@ -160,9 +167,12 @@ func main() {
 		if exit {
 			break
 		}
-		cntCons++
+		//cntCons++
 		count := len(val)
 		if count > 1 {
+			cntCons++
+		}
+		if count > 2 {
 			fmt.Printf("%d. %v, %d duplicates\n", cntCons, key, count)
 			for id, path := range val {
 				i := id + 1
@@ -215,3 +225,5 @@ func main() {
 }
 
 // TODO: show count of duplicate
+// TODO: configure count of duplicates via config file
+// TODO: fix error when press 'q'
