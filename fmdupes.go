@@ -150,7 +150,8 @@ func main() {
 	fmt.Println("-------")
 
 	// TODO: sort by count = len(val)
-	fmt.Printf("Found %d consequences\n", len(xxx))
+	//fmt.Printf("Found %d uniques\n", len(xxx))
+	// TODO: Count duplicates (count > 1)
 	exit := false
 	cntCons := 0
 	var deleteAllSize int64
@@ -161,7 +162,7 @@ func main() {
 		}
 		cntCons++
 		count := len(val)
-		if count > 2 {
+		if count > 1 {
 			fmt.Printf("%d. %v, %d duplicates\n", cntCons, key, count)
 			for id, path := range val {
 				i := id + 1
