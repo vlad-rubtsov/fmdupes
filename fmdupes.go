@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cheggaaa/pb"
 	tagg "github.com/wtolson/go-taglib"
 	gcfg "gopkg.in/gcfg.v1"
 )
@@ -38,6 +39,8 @@ type SongType struct {
 var mp3List []Mp3Song
 var xxx map[SongType][]string
 var cntMP3Files int
+var bar *pb.ProgressBar
+var deleteAllSize int64
 
 func GetMp3Data(filename string) (Mp3Song, error) {
 	mp3File, err := tagg.Read(filename)
@@ -98,6 +101,7 @@ func DirWalk(path string, fi os.FileInfo, err error) error {
 		// TODO: save data for know time, size and bitrate
 		xxx[SongType{Artist: data.Artist, Title: data.Title}] =
 			append(xxx[SongType{Artist: data.Artist, Title: data.Title}], path)
+		bar.Increment()
 	}
 	return nil
 }
@@ -137,22 +141,19 @@ func main() {
 			fmt.Errorf("DirWalk error: %v", err)
 		}
 	}
-	fmt.Printf("Found %d music files\n", cntMP3Files)
+	fmt.Printf("Found %d music files in directory %s\n", cntMP3Files, cfg.InputDir)
+
+	bar = pb.New(cntMP3Files)
+	bar.Start()
 
 	for _, dir := range dirs {
-		//files, _ := ioutil.ReadDir(dir)
-		//fmt.Println("count of dirs and files: ", len(files))
-
 		err := filepath.Walk(dir, DirWalk)
 		if err != nil {
 			fmt.Errorf("DirWalk error: %v", err)
 		}
 	}
-
-	fmt.Println("Result:")
+	bar.FinishPrint("Result:")
 	fmt.Println("-------")
-	fmt.Printf("Read %d songs from directory %s\n", len(mp3List), cfg.InputDir)
-
 	//fmt.Println("xxx: ", xxx)
 
 	// TODO: sort by count = len(val)
@@ -197,7 +198,6 @@ func main() {
 
 					var kilobytes float64
 					kilobytes = (float64)(size / 1024)
-
 					var megabytes float64
 					megabytes = (float64)(kilobytes / 1024) // cast to type float64
 
@@ -205,12 +205,15 @@ func main() {
 					err := os.Remove(filepath)
 					if err != nil {
 						fmt.Printf("Error delete file: %s\n", err)
+					} else {
+						deleteAllSize += size
 					}
 				}
 			}
 			fmt.Println()
-		}
-	}
+		} // if
+	} // for
+	fmt.Printf("All deleted size: %.3f MB\n", (float64)(deleteAllSize/1024/1024))
 }
 
 // TODO: show count of duplicate
