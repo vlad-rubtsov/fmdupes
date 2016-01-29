@@ -196,25 +196,27 @@ func main() {
 			default:
 				ids := strings.Split(in, ",")
 				for _, is := range ids {
-					ii, _ := strconv.Atoi(is)
-					filepath := val[ii-1]
-					f, _ := os.Open(filepath)
-					fi, _ := f.Stat()
-					size := fi.Size()
-					f.Close()
+					ii, err := strconv.Atoi(is)
+					if err == nil && ii <= len(val) {
+						filepath := val[ii-1]
+						f, _ := os.Open(filepath)
+						fi, _ := f.Stat()
+						size := fi.Size()
+						f.Close()
 
-					var kilobytes float64
-					kilobytes = (float64)(size / 1024)
-					var megabytes float64
-					megabytes = (float64)(kilobytes / 1024) // cast to type float64
+						var kilobytes float64
+						kilobytes = (float64)(size / 1024)
+						var megabytes float64
+						megabytes = (float64)(kilobytes / 1024) // cast to type float64
 
-					fmt.Printf("Delete %s, size: %.3f MB\n", filepath, megabytes)
-					err := os.Remove(filepath)
-					if err != nil {
-						fmt.Printf("Error delete file: %s\n", err)
-					} else {
-						deleteAllSize += size
-						cntDeletedFiles++
+						fmt.Printf("Delete %s, size: %.3f MB\n", filepath, megabytes)
+						err := os.Remove(filepath)
+						if err != nil {
+							fmt.Printf("Error delete file: %s\n", err)
+						} else {
+							deleteAllSize += size
+							cntDeletedFiles++
+						}
 					}
 				}
 			}
