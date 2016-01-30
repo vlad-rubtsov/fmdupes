@@ -1,5 +1,12 @@
 package main
 
+// TODO: sort by count = len(val)
+// TODO: save data for know time, size and bitrate
+// TODO: process flags
+// TODO: show count of duplicate ???
+// TODO: fix error when press 'q'
+// TODO: delete all files
+
 import (
 	"fmt"
 	"os"
@@ -8,13 +15,14 @@ import (
 	"strings"
 
 	"github.com/cheggaaa/pb"
-	tagg "github.com/wtolson/go-taglib"
+	tag "github.com/wtolson/go-taglib"
 	gcfg "gopkg.in/gcfg.v1"
 )
 
 // Types
 type Config struct {
-	InputDir string
+	InputDir        string
+	CountDuplicates int `gcfg:"count"`
 }
 
 type configFile struct {
@@ -42,7 +50,7 @@ var cntMP3Files int
 var bar *pb.ProgressBar
 
 func GetMp3Data(filename string) (Mp3Song, error) {
-	mp3File, err := tagg.Read(filename)
+	mp3File, err := tag.Read(filename)
 	if err != nil {
 		fmt.Println("Open: unable to open file: ", err)
 		return Mp3Song{}, err
@@ -92,7 +100,6 @@ func DirWalk(path string, fi os.FileInfo, err error) error {
 		data.Path = path
 		mp3List = append(mp3List, data)
 
-		// TODO: save data for know time, size and bitrate
 		xxx[SongType{Artist: data.Artist, Title: data.Title}] =
 			append(xxx[SongType{Artist: data.Artist, Title: data.Title}], path)
 		bar.Increment()
@@ -106,6 +113,10 @@ func loadConfig(cfgFile string) Config {
 	if err != nil {
 		fmt.Errorf("Error reading config file: %s", err)
 	}
+	if cfg.Fmdupes.CountDuplicates == 0 {
+		cfg.Fmdupes.CountDuplicates = 2
+	}
+
 	return cfg.Fmdupes
 }
 
@@ -126,7 +137,6 @@ func main() {
 	// Walk in dirs
 	//
 	dirs := strings.Split(cfg.InputDir, ",")
-	//fmt.Println("dirs: ", dirs)
 
 	// count all music files
 	for _, dir := range dirs {
@@ -149,8 +159,6 @@ func main() {
 	bar.FinishPrint("Result:")
 	fmt.Println("-------")
 
-	// TODO: sort by count = len(val)
-
 	cntDuplicates := 0
 	for _, val := range xxx {
 		if len(val) > 1 {
@@ -167,12 +175,11 @@ func main() {
 		if exit {
 			break
 		}
-		//cntCons++
 		count := len(val)
 		if count > 1 {
 			cntCons++
 		}
-		if count > 2 {
+		if count >= cfg.CountDuplicates {
 			fmt.Printf("%d. %v, %d duplicates\n", cntCons, key, count)
 			for id, path := range val {
 				i := id + 1
@@ -190,7 +197,6 @@ func main() {
 				exit = true
 				break
 			case "all":
-				// TODO: delete all files
 				fmt.Println("Not realized yet")
 				break
 			default:
@@ -207,7 +213,7 @@ func main() {
 						var kilobytes float64
 						kilobytes = (float64)(size / 1024)
 						var megabytes float64
-						megabytes = (float64)(kilobytes / 1024) // cast to type float64
+						megabytes = (float64)(kilobytes / 1024)
 
 						fmt.Printf("Delete %s, size: %.3f MB\n", filepath, megabytes)
 						err := os.Remove(filepath)
@@ -223,9 +229,7 @@ func main() {
 			fmt.Println()
 		} // if
 	} // for
-	fmt.Printf("Delete %d files, all size: %.3f MB\n", cntDeletedFiles, (float64)(deleteAllSize/1024/1024))
+	fmt.Printf("Delete %d files, all size: %.3f MB\n",
+		cntDeletedFiles,
+		((float64)(deleteAllSize) / 1024 / 1024))
 }
-
-// TODO: show count of duplicate
-// TODO: configure count of duplicates via config file
-// TODO: fix error when press 'q'
