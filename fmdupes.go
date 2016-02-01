@@ -3,9 +3,8 @@ package main
 // TODO: sort by count = len(val)
 // TODO: save data for know time, size and bitrate
 // TODO: process flags
-// TODO: show count of duplicate ???
 // TODO: fix error when press 'q'
-// TODO: delete all files
+// TODO: move delete file code to function
 
 import (
 	"fmt"
@@ -185,7 +184,7 @@ func main() {
 				i := id + 1
 				fmt.Printf("[%d] %s\n", i, path)
 			}
-			fmt.Printf("Set [1-%d] to delete: ", len(val))
+			fmt.Printf("Set [1-%d, all] to delete: ", len(val))
 			in := ""
 			fmt.Scanln(&in)
 			switch in {
@@ -197,7 +196,27 @@ func main() {
 				exit = true
 				break
 			case "all":
-				fmt.Println("Not realized yet")
+				fmt.Println("Need to test")
+				for _, filepath := range val {
+					f, _ := os.Open(filepath)
+					fi, _ := f.Stat()
+					size := fi.Size()
+					f.Close()
+
+					var kilobytes float64
+					kilobytes = (float64)(size / 1024)
+					var megabytes float64
+					megabytes = (float64)(kilobytes / 1024)
+
+					fmt.Printf("Delete %s, size: %.3f MB\n", filepath, megabytes)
+					err := os.Remove(filepath)
+					if err != nil {
+						fmt.Printf("Error delete file: %s\n", err)
+					} else {
+						deleteAllSize += size
+						cntDeletedFiles++
+					}
+				}
 				break
 			default:
 				ids := strings.Split(in, ",")
