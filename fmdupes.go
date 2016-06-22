@@ -5,6 +5,8 @@ package main
 // TODO: process flags
 // TODO: fix error when press 'q'
 // TODO: move delete file code to function
+// TODO: comment and refactor all code
+
 
 import (
 	"fmt"
@@ -34,6 +36,7 @@ type Mp3Song struct {
 	Title    string
 	Genre    string
 	Path     string
+	Bitrate  int
 	Size     int64
 }
 
@@ -58,14 +61,15 @@ func GetMp3Data(filename string) (Mp3Song, error) {
 
 	//fmt.Printf("f: %s, artist: %s, title: %s\n",
 	//	filename, mp3File.Artist(), mp3File.Title())
-	// fmt.Printf("file: %s, version: %v\n",
-	// 	filename, mp3File.Version())
+	//  fmt.Printf("file: %s, bitrate: %v\n",
+	//			 filename, mp3File.Bitrate())
 
 	return Mp3Song{
 		Filename: filename,
 		Artist:   mp3File.Artist(),
 		Title:    mp3File.Title(),
 		Genre:    mp3File.Genre(),
+		Bitrate:  mp3File.Bitrate(),
 		Size:     0,
 	}, nil
 }
